@@ -43,3 +43,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# deployment (Railway / Vercel) — secrets, deps and build output are never committed
+.env
+.env.local
+node_modules/
+.next/
