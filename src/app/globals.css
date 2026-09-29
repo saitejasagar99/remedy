@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
+/*
+ * REMEDY ships one coherent, light, enterprise theme.
+ *
+ * `dark:` variants are re-registered against a `.dark` class that is never
+ * applied, so a system-level dark preference can no longer render a dashboard
+ * where half the panels inherited a dark palette and half did not. Everything
+ * below is therefore always the theme you see.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f4f4f5;
+  --foreground: #18181b;
 }
 
 @theme inline {
@@ -12,15 +23,106 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  font-feature-settings: "cv05", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numbers in tables and metric tiles line up. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------- motion ---- */
+
+@keyframes remedy-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes remedy-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(2 44 34 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(2 44 34 / 0);
+  }
+}
+
+@keyframes remedy-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.remedy-rise {
+  animation: remedy-rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.remedy-glow {
+  animation: remedy-glow 1.6s ease-in-out infinite;
+}
+
+.remedy-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: remedy-indeterminate 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remedy-rise,
+  .remedy-glow,
+  .remedy-sweep::after {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------------------ scrollbars -- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+  background-clip: content-box;
+}
+
+/* ---------------------------------------------------------------- focus --- */
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #18181b;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
