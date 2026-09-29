@@ -7,7 +7,7 @@
  */
 import type { JsonSchema } from './json';
 
-import { llmConfig } from '../config';
+import { llmConfig, requireConfig } from '../config';
 import { parseLLMJson } from './json';
 
 export type LlmResult<T> =
@@ -82,6 +82,19 @@ export async function chatJSON<T>(options: ChatOptions<T>): Promise<LlmResult<T>
   const attempts = options.attempts ?? 2;
   let lastError = 'unknown error';
 
+  // Production pre-flight: a missing or localhost LLM_BASE_URL is reported as a
+  // normal LLM failure (never a crash) so the pipeline can fall back to
+  // memory-only reasoning and say so. Outside production this is a no-op.
+  try {
+    requireConfig();
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'invalid configuration',
+      model: llmConfig.model,
+    };
+  }
+
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), llmConfig.timeoutMs);
@@ -116,6 +129,7 @@ export async function llmAvailable(): Promise<boolean> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5_000);
   try {
+    requireConfig(); // unreachable configuration counts as "not available"
     const url = `${llmConfig.baseUrl.replace(/\/$/, '')}/models`;
     const response = await fetch(url, {
       signal: controller.signal,

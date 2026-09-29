@@ -12,7 +12,7 @@
  */
 import { HindsightClient, HindsightError } from '@vectorize-io/hindsight-client';
 
-import { hindsightConfig } from '../config';
+import { hindsightConfig, requireConfig } from '../config';
 
 export { HindsightError };
 
@@ -36,6 +36,9 @@ let client: HindsightClient | null = null;
  */
 export function getHindsightClient(): HindsightClient {
   if (client) return client;
+  // Production pre-flight: refuses a missing or localhost HINDSIGHT_URL before
+  // any request is sent (no-op outside production).
+  requireConfig();
   const options: ConstructorParameters<typeof HindsightClient>[0] = {
     baseUrl: hindsightConfig.baseUrl,
     // Conservative: two attempts for idempotent reads, writes are never retried.

@@ -24,10 +24,41 @@ function requiredEnv(name: string): string {
   return raw;
 }
 
+/**
+ * True when running as the built application.
+ *
+ * Note that `next build` also sets NODE_ENV=production, so anything checked
+ * here must already hold during a local build — a build legitimately reads the
+ * localhost values a developer keeps in `.env`. The stricter localhost
+ * rejection therefore lives in `requireConfig()`, which runs when the app
+ * actually serves requests rather than when it compiles.
+ */
+const isProduction = process.env.NODE_ENV === 'production';
+
+/** Hostnames meaning "this machine" — never a valid production target. */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Whether a URL points at the local machine. Unparseable input is not loopback. */
+function isLoopbackUrl(value: string): boolean {
+  try {
+    return LOOPBACK_HOSTS.has(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Hindsight connection settings. */
 export const hindsightConfig = {
-  /** Base URL of the Hindsight server (local bare-metal by default). */
-  baseUrl: process.env.HINDSIGHT_URL ?? 'http://localhost:8888',
+  /**
+   * Base URL of the Hindsight server.
+   *
+   * Development falls back to the local bare-metal server. In production there
+   * is no fallback: the variable must be supplied explicitly (Render sets it in
+   * `render.yaml`, e.g. the Hindsight Cloud endpoint).
+   */
+  baseUrl: isProduction
+    ? requiredEnv('HINDSIGHT_URL')
+    : (process.env.HINDSIGHT_URL ?? 'http://localhost:8888'),
   /** Tenant segment in the REST path. Self-hosted servers use `default`. */
   tenant: process.env.HINDSIGHT_TENANT ?? 'default',
   /** Memory bank that holds all REMEDY organisational experience. */
@@ -81,6 +112,23 @@ export function requireConfig(): void {
   }
   if (!hindsightConfig.bankId) {
     throw new Error('Missing required environment variable: HINDSIGHT_BANK');
+  }
+  if (isProduction) {
+    // Both URLs are guaranteed present by this point (enforced at import), so
+    // the remaining production failure mode is a value that is present but
+    // points at this machine. Rejected here rather than at import because
+    // `next build` runs with NODE_ENV=production and must still compile against
+    // the localhost values in a local `.env`.
+    if (isLoopbackUrl(hindsightConfig.baseUrl)) {
+      throw new Error(
+        'HINDSIGHT_URL must not be a localhost URL in production — set it in the Render dashboard',
+      );
+    }
+    if (isLoopbackUrl(llmConfig.baseUrl)) {
+      throw new Error(
+        'LLM_BASE_URL must not be a localhost URL in production — set it in the Render dashboard',
+      );
+    }
   }
 }
 

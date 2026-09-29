@@ -1,10 +1,16 @@
 # Render Blueprint — REMEDY web service.
 #
 # Build/start commands and the Node version live here so a new Render service
-# can be created from this file without remembering the details. No secret and
-# no production endpoint is written into this file: every app variable below is
-# declared with `sync: false`, which reserves the key and leaves the value to
-# be pasted into the Render dashboard (Environment tab).
+# can be created from this file without remembering the details.
+#
+# What may live in this file: non-secret configuration (endpoints, tenant/bank,
+# timeouts, Node version). What may NOT: HINDSIGHT_API_KEY, LLM_API_KEY, or any
+# other credential — those are declared with `sync: false` so the value is
+# pasted into the Render dashboard (Environment tab) and never into git.
+#
+# In production the app validates its configuration before serving requests
+# (src/lib/config.ts → requireConfig): HINDSIGHT_URL and LLM_BASE_URL must be
+# present and must not be localhost URLs.
 services:
   - type: web
     name: remedy
@@ -17,32 +23,49 @@ services:
       # selection cannot drift above 20.x (better-sqlite3 compiles from source).
       - key: NODE_VERSION
         value: 20.x
-      # Hindsight memory layer — set the real Hindsight Cloud URL later.
+
+      # --- Hindsight memory layer ------------------------------------------
+      # Non-secret, so it is safe (and required) to state here: this is the
+      # Hindsight Cloud endpoint, not a local server.
       - key: HINDSIGHT_URL
-        sync: false
+        value: https://api.hindsight.vectorize.io
+      # Both values are confirmed by src/lib/config.ts defaults and .env.example.
       - key: HINDSIGHT_TENANT
-        sync: false
+        value: default
       - key: HINDSIGHT_BANK
-        sync: false
+        value: remedy
+      # SECRET — Hindsight Cloud rejects unauthenticated calls. Set the value
+      # in the Render dashboard; never write it into this file.
       - key: HINDSIGHT_API_KEY
         sync: false
       - key: HINDSIGHT_RETAIN_TIMEOUT_MS
         sync: false
       - key: HINDSIGHT_RECALL_TIMEOUT_MS
         sync: false
-      # LLM endpoint — required at build time (src/lib/config.ts), so it must
-      # be set in the dashboard before the first build succeeds.
+
+      # --- LLM (any OpenAI-compatible endpoint) ----------------------------
+      # No provider is configured in the repository, so this stays unset here:
+      # a cloud LLM provider still needs to be selected and its credentials
+      # added in Render. It is REQUIRED at build time (read by config.ts while
+      # `next build` collects routes), so set it before the first build.
+      # Must be a full base URL including the version path the provider uses
+      # (e.g. .../v1) — the app appends /chat/completions itself — and must not
+      # be a localhost URL in production.
       - key: LLM_BASE_URL
         sync: false
       - key: LLM_MODEL
         sync: false
+      # SECRET (if the provider requires one) — dashboard only.
       - key: LLM_API_KEY
         sync: false
       - key: LLM_TIMEOUT_MS
         sync: false
       - key: LLM_TEMPERATURE
         sync: false
-      # SQLite location, e.g. /var/data/remedy.db if a disk is attached.
-      # Defaults to ./data/remedy.db when unset.
+
+      # --- Application state (SQLite) --------------------------------------
+      # Defaults to ./data/remedy.db when unset. Render Free has no disk:
+      # storage is EPHEMERAL, so SQLite data does not persist across redeploys
+      # or instance recreation. No disk is attached by this blueprint.
       - key: DATABASE_PATH
         sync: false
