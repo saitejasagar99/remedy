@@ -1,0 +1,48 @@
+# Render Blueprint — REMEDY web service.
+#
+# Build/start commands and the Node version live here so a new Render service
+# can be created from this file without remembering the details. No secret and
+# no production endpoint is written into this file: every app variable below is
+# declared with `sync: false`, which reserves the key and leaves the value to
+# be pasted into the Render dashboard (Environment tab).
+services:
+  - type: web
+    name: remedy
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      # Pins the runtime independently of engines/.nvmrc so Render's Node
+      # selection cannot drift above 20.x (better-sqlite3 compiles from source).
+      - key: NODE_VERSION
+        value: 20.x
+      # Hindsight memory layer — set the real Hindsight Cloud URL later.
+      - key: HINDSIGHT_URL
+        sync: false
+      - key: HINDSIGHT_TENANT
+        sync: false
+      - key: HINDSIGHT_BANK
+        sync: false
+      - key: HINDSIGHT_API_KEY
+        sync: false
+      - key: HINDSIGHT_RETAIN_TIMEOUT_MS
+        sync: false
+      - key: HINDSIGHT_RECALL_TIMEOUT_MS
+        sync: false
+      # LLM endpoint — required at build time (src/lib/config.ts), so it must
+      # be set in the dashboard before the first build succeeds.
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_TIMEOUT_MS
+        sync: false
+      - key: LLM_TEMPERATURE
+        sync: false
+      # SQLite location, e.g. /var/data/remedy.db if a disk is attached.
+      # Defaults to ./data/remedy.db when unset.
+      - key: DATABASE_PATH
+        sync: false
